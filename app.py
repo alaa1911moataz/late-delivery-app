@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from huggingface_hub import hf_hub_download
 
 
 # =========================================================
@@ -15,12 +16,18 @@ st.set_page_config(
 
 
 # =========================================================
-# Load Model
+# Load Model from Hugging Face
 # =========================================================
 
 @st.cache_resource
 def load_model():
-    return joblib.load("late_delivery_model.pkl")
+
+    model_path = hf_hub_download(
+        repo_id="alaa1911/late-delivery-model",
+        filename="late_delivery_model.pkl"
+    )
+
+    return joblib.load(model_path)
 
 
 model = load_model()
@@ -44,6 +51,10 @@ st.write(
 
 with st.form("prediction_form"):
 
+    # =====================================================
+    # Order Information
+    # =====================================================
+
     st.subheader("📦 Order Information")
 
     col1, col2, col3 = st.columns(3)
@@ -52,7 +63,12 @@ with st.form("prediction_form"):
 
         Type = st.selectbox(
             "Type",
-            ["DEBIT", "TRANSFER", "CASH", "PAYMENT"]
+            [
+                "DEBIT",
+                "TRANSFER",
+                "CASH",
+                "PAYMENT"
+            ]
         )
 
         shipping_mode = st.selectbox(
@@ -183,12 +199,6 @@ with st.form("prediction_form"):
             value="PR"
         )
 
-        customer_id = st.number_input(
-            "Customer Id",
-            min_value=0,
-            value=1
-        )
-
     with col2:
 
         latitude = st.number_input(
@@ -235,7 +245,7 @@ with st.form("prediction_form"):
 
     st.subheader("🛍️ Product Information")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
 
@@ -254,20 +264,6 @@ with st.form("prediction_form"):
         product_name = st.text_input(
             "Product Name",
             value="Example Product"
-        )
-
-    with col3:
-
-        order_id = st.number_input(
-            "Order Id",
-            min_value=0,
-            value=1
-        )
-
-        order_item_id = st.number_input(
-            "Order Item Id",
-            min_value=0,
-            value=1
         )
 
 
@@ -315,7 +311,6 @@ with st.form("prediction_form"):
             value=2
         )
 
-
     order_hour = st.number_input(
         "Order Hour",
         min_value=0,
@@ -339,10 +334,15 @@ with st.form("prediction_form"):
 
 if predict_button:
 
-    # Create DataFrame with EXACT same column names
+    # =====================================================
+    # Create Input DataFrame
+    # =====================================================
+
     input_data = pd.DataFrame({
 
-        "Type": [Type],
+        "Type": [
+            Type
+        ],
 
         "Days for shipment (scheduled)": [
             days_scheduled
@@ -370,10 +370,6 @@ if predict_button:
 
         "Customer Country": [
             customer_country
-        ],
-
-        "Customer Id": [
-            customer_id
         ],
 
         "Customer Segment": [
@@ -412,20 +408,12 @@ if predict_button:
             order_country
         ],
 
-        "Order Id": [
-            order_id
-        ],
-
         "Order Item Discount": [
             order_item_discount
         ],
 
         "Order Item Discount Rate": [
             order_item_discount_rate
-        ],
-
-        "Order Item Id": [
-            order_item_id
         ],
 
         "Order Item Profit Ratio": [
@@ -496,14 +484,24 @@ if predict_button:
 
     try:
 
-        prediction = model.predict(input_data)[0]
+        prediction = model.predict(
+            input_data
+        )[0]
 
-        probability = model.predict_proba(input_data)[0]
+        probability = model.predict_proba(
+            input_data
+        )[0]
 
-        # Probability of class 1
-        class_1_index = list(model.classes_).index(1)
 
-        late_probability = probability[class_1_index]
+        # Find probability of class 1
+
+        class_1_index = list(
+            model.classes_
+        ).index(1)
+
+        late_probability = probability[
+            class_1_index
+        ]
 
 
         # =================================================
@@ -512,9 +510,12 @@ if predict_button:
 
         st.divider()
 
-        st.subheader("📊 Prediction Result")
+        st.subheader(
+            "📊 Prediction Result"
+        )
 
         col1, col2 = st.columns(2)
+
 
         with col1:
 
@@ -543,12 +544,18 @@ if predict_button:
         # Probability Bar
         # =================================================
 
-        st.write("### Risk Level")
+        st.write(
+            "### Risk Level"
+        )
 
         st.progress(
             float(late_probability)
         )
 
+
+        # =================================================
+        # Risk Classification
+        # =================================================
 
         if late_probability >= 0.70:
 
