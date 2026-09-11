@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 import joblib
@@ -41,392 +40,544 @@ model = load_model()
 st.title("🚚 Late Delivery Risk Prediction")
 
 st.write(
-    "Upload an Excel or CSV file containing order information. "
-    "The model will predict late delivery risk for every order."
+    "Enter the order information below to predict whether "
+    "the order is at risk of late delivery."
 )
 
 
 # =========================================================
-# Required Columns
+# Input Form
 # =========================================================
 
-required_columns = [
-    "Type",
-    "Days for shipment (scheduled)",
-    "Benefit per order",
-    "Sales per customer",
-    "Category Id",
-    "Category Name",
-    "Customer City",
-    "Customer Country",
-    "Customer Segment",
-    "Customer State",
-    "Department Id",
-    "Department Name",
-    "Latitude",
-    "Longitude",
-    "Market",
-    "Order City",
-    "Order Country",
-    "Order Item Discount",
-    "Order Item Discount Rate",
-    "Order Item Profit Ratio",
-    "Order Item Quantity",
-    "Sales",
-    "Order Item Total",
-    "Order Region",
-    "Order State",
-    "Product Card Id",
-    "Product Name",
-    "Product Price",
-    "Shipping Mode",
-    "Order Date",
-    "Order Time"
-]
+with st.form("prediction_form"):
+
+    # =====================================================
+    # Order Information
+    # =====================================================
+
+    st.subheader("📦 Order Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        Type = st.selectbox(
+            "Type",
+            [
+                "DEBIT",
+                "TRANSFER",
+                "CASH",
+                "PAYMENT"
+            ]
+        )
+
+        shipping_mode = st.selectbox(
+            "Shipping Mode",
+            [
+                "Standard Class",
+                "Second Class",
+                "First Class",
+                "Same Day"
+            ]
+        )
+
+        days_scheduled = st.number_input(
+            "Days for shipment (scheduled)",
+            min_value=0,
+            max_value=10,
+            value=3
+        )
+
+        order_quantity = st.number_input(
+            "Order Item Quantity",
+            min_value=1,
+            max_value=100,
+            value=1
+        )
+
+        customer_segment = st.selectbox(
+            "Customer Segment",
+            [
+                "Consumer",
+                "Corporate",
+                "Home Office"
+            ]
+        )
+
+    with col2:
+
+        benefit_per_order = st.number_input(
+            "Benefit per order",
+            value=0.0
+        )
+
+        sales_customer = st.number_input(
+            "Sales per customer",
+            min_value=0.0,
+            value=100.0
+        )
+
+        order_item_discount = st.number_input(
+            "Order Item Discount",
+            min_value=0.0,
+            value=0.0
+        )
+
+        order_item_discount_rate = st.number_input(
+            "Order Item Discount Rate",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0
+        )
+
+        order_item_profit_ratio = st.number_input(
+            "Order Item Profit Ratio",
+            value=0.0
+        )
+
+    with col3:
+
+        sales = st.number_input(
+            "Sales",
+            min_value=0.0,
+            value=100.0
+        )
+
+        order_item_total = st.number_input(
+            "Order Item Total",
+            min_value=0.0,
+            value=100.0
+        )
+
+        product_price = st.number_input(
+            "Product Price",
+            min_value=0.0,
+            value=100.0
+        )
+
+        category_id = st.number_input(
+            "Category Id",
+            min_value=0,
+            value=1
+        )
+
+        department_id = st.number_input(
+            "Department Id",
+            min_value=0,
+            value=1
+        )
+
+        product_card_id = st.number_input(
+            "Product Card Id",
+            min_value=0,
+            value=1
+        )
+
+
+    # =====================================================
+    # Customer Information
+    # =====================================================
+
+    st.subheader("👤 Customer Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        customer_city = st.text_input(
+            "Customer City",
+            value="Caguas"
+        )
+
+        customer_country = st.text_input(
+            "Customer Country",
+            value="Puerto Rico"
+        )
+
+        customer_state = st.text_input(
+            "Customer State",
+            value="PR"
+        )
+
+    with col2:
+
+        latitude = st.number_input(
+            "Latitude",
+            value=18.0
+        )
+
+        longitude = st.number_input(
+            "Longitude",
+            value=-66.0
+        )
+
+        market = st.text_input(
+            "Market",
+            value="LATAM"
+        )
+
+    with col3:
+
+        order_region = st.text_input(
+            "Order Region",
+            value="Caribbean"
+        )
+
+        order_state = st.text_input(
+            "Order State",
+            value="PR"
+        )
+
+        order_city = st.text_input(
+            "Order City",
+            value="Caguas"
+        )
+
+        order_country = st.text_input(
+            "Order Country",
+            value="Puerto Rico"
+        )
+
+
+    # =====================================================
+    # Category / Product Information
+    # =====================================================
+
+    st.subheader("🛍️ Product Information")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        category_name = st.text_input(
+            "Category Name",
+            value="Sporting Goods"
+        )
+
+        department_name = st.text_input(
+            "Department Name",
+            value="Fitness"
+        )
+
+    with col2:
+
+        product_name = st.text_input(
+            "Product Name",
+            value="Example Product"
+        )
+
+
+    # =====================================================
+    # Date & Time
+    # =====================================================
+
+    st.subheader("📅 Order Date & Time")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+
+        order_year = st.number_input(
+            "Order Year",
+            min_value=2000,
+            max_value=2030,
+            value=2017
+        )
+
+    with col2:
+
+        order_month = st.number_input(
+            "Order Month",
+            min_value=1,
+            max_value=12,
+            value=6
+        )
+
+    with col3:
+
+        order_day = st.number_input(
+            "Order Day",
+            min_value=1,
+            max_value=31,
+            value=15
+        )
+
+    with col4:
+
+        order_dayofweek = st.number_input(
+            "Order DayOfWeek",
+            min_value=0,
+            max_value=6,
+            value=2
+        )
+
+    order_hour = st.number_input(
+        "Order Hour",
+        min_value=0,
+        max_value=23,
+        value=12
+    )
+
+
+    # =====================================================
+    # Prediction Button
+    # =====================================================
+
+    predict_button = st.form_submit_button(
+        "🔮 Predict Late Delivery Risk"
+    )
 
 
 # =========================================================
-# File Upload
+# Prediction
 # =========================================================
 
-st.subheader("📂 Upload Your File")
+if predict_button:
 
-uploaded_file = st.file_uploader(
-    "Upload Excel or CSV file",
-    type=["xlsx", "xls", "csv"]
-)
+    # =====================================================
+    # Create Input DataFrame
+    # =====================================================
+
+    input_data = pd.DataFrame({
+
+        "Type": [
+            Type
+        ],
+
+        "Days for shipment (scheduled)": [
+            days_scheduled
+        ],
+
+        "Benefit per order": [
+            benefit_per_order
+        ],
+
+        "Sales per customer": [
+            sales_customer
+        ],
+
+        "Category Id": [
+            category_id
+        ],
+
+        "Category Name": [
+            category_name
+        ],
+
+        "Customer City": [
+            customer_city
+        ],
+
+        "Customer Country": [
+            customer_country
+        ],
+
+        "Customer Segment": [
+            customer_segment
+        ],
+
+        "Customer State": [
+            customer_state
+        ],
+
+        "Department Id": [
+            department_id
+        ],
+
+        "Department Name": [
+            department_name
+        ],
+
+        "Latitude": [
+            latitude
+        ],
+
+        "Longitude": [
+            longitude
+        ],
+
+        "Market": [
+            market
+        ],
+
+        "Order City": [
+            order_city
+        ],
+
+        "Order Country": [
+            order_country
+        ],
+
+        "Order Item Discount": [
+            order_item_discount
+        ],
+
+        "Order Item Discount Rate": [
+            order_item_discount_rate
+        ],
+
+        "Order Item Profit Ratio": [
+            order_item_profit_ratio
+        ],
+
+        "Order Item Quantity": [
+            order_quantity
+        ],
+
+        "Sales": [
+            sales
+        ],
+
+        "Order Item Total": [
+            order_item_total
+        ],
+
+        "Order Region": [
+            order_region
+        ],
+
+        "Order State": [
+            order_state
+        ],
+
+        "Product Card Id": [
+            product_card_id
+        ],
+
+        "Product Name": [
+            product_name
+        ],
+
+        "Product Price": [
+            product_price
+        ],
+
+        "Shipping Mode": [
+            shipping_mode
+        ],
+
+        "Order Year": [
+            order_year
+        ],
+
+        "Order Month": [
+            order_month
+        ],
+
+        "Order Day": [
+            order_day
+        ],
+
+        "Order DayOfWeek": [
+            order_dayofweek
+        ],
+
+        "Order Hour": [
+            order_hour
+        ]
+    })
 
 
-# =========================================================
-# Process File
-# =========================================================
-
-if uploaded_file is not None:
+    # =====================================================
+    # Prediction
+    # =====================================================
 
     try:
 
-        # -------------------------------------------------
-        # Read File
-        # -------------------------------------------------
+        prediction = model.predict(
+            input_data
+        )[0]
 
-        if uploaded_file.name.endswith(".csv"):
-
-            df = pd.read_csv(uploaded_file)
-
-        else:
-
-            df = pd.read_excel(uploaded_file)
+        probability = model.predict_proba(
+            input_data
+        )[0]
 
 
-        st.success(
-            f"✅ File uploaded successfully: {uploaded_file.name}"
-        )
+        # Find probability of class 1
 
+        class_1_index = list(
+            model.classes_
+        ).index(1)
 
-        # -------------------------------------------------
-        # Show Original Data
-        # -------------------------------------------------
-
-        st.subheader("📋 Uploaded Data")
-
-        st.write(
-            f"Rows: {df.shape[0]} | Columns: {df.shape[1]}"
-        )
-
-        st.dataframe(
-            df.head(10),
-            use_container_width=True
-        )
-
-
-        # -------------------------------------------------
-        # Check Required Columns
-        # -------------------------------------------------
-
-        missing_columns = [
-            col for col in required_columns
-            if col not in df.columns
+        late_probability = probability[
+            class_1_index
         ]
 
 
-        if missing_columns:
+        # =================================================
+        # Results
+        # =================================================
 
-            st.error(
-                "❌ Some required columns are missing."
+        st.divider()
+
+        st.subheader(
+            "📊 Prediction Result"
+        )
+
+        col1, col2 = st.columns(2)
+
+
+        with col1:
+
+            if prediction == 1:
+
+                st.error(
+                    "⚠️ HIGH RISK OF LATE DELIVERY"
+                )
+
+            else:
+
+                st.success(
+                    "✅ LOW RISK OF LATE DELIVERY"
+                )
+
+
+        with col2:
+
+            st.metric(
+                "Late Delivery Probability",
+                f"{late_probability * 100:.2f}%"
             )
 
-            st.write("Missing columns:")
 
-            for col in missing_columns:
-                st.write(f"- `{col}`")
+        # =================================================
+        # Probability Bar
+        # =================================================
 
-            st.stop()
+        st.write(
+            "### Risk Level"
+        )
 
-
-        st.success(
-            "✅ All required columns are available."
+        st.progress(
+            float(late_probability)
         )
 
 
         # =================================================
-        # Predict Button
+        # Risk Classification
         # =================================================
 
-        if st.button(
-            "🔮 Predict Late Delivery Risk",
-            type="primary"
-        ):
+        if late_probability >= 0.70:
 
-            with st.spinner(
-                "Making predictions..."
-            ):
+            st.error(
+                "🔴 High Risk"
+            )
 
-                # -----------------------------------------
-                # Copy Data
-                # -----------------------------------------
+        elif late_probability >= 0.40:
 
-                prediction_data = df.copy()
+            st.warning(
+                "🟡 Medium Risk"
+            )
 
-
-                # -----------------------------------------
-                # Convert Order Date
-                # -----------------------------------------
-
-                prediction_data["Order Date"] = pd.to_datetime(
-                    prediction_data["Order Date"],
-                    errors="coerce"
-                )
-
-
-                prediction_data["Order Year"] = (
-                    prediction_data["Order Date"].dt.year
-                )
-
-                prediction_data["Order Month"] = (
-                    prediction_data["Order Date"].dt.month
-                )
-
-                prediction_data["Order Day"] = (
-                    prediction_data["Order Date"].dt.day
-                )
-
-                prediction_data["Order DayOfWeek"] = (
-                    prediction_data["Order Date"].dt.dayofweek
-                )
-
-
-                # -----------------------------------------
-                # Convert Order Time
-                # -----------------------------------------
-
-                prediction_data["Order Time"] = pd.to_datetime(
-                    prediction_data["Order Time"],
-                    format="%H:%M:%S",
-                    errors="coerce"
-                )
-
-
-                prediction_data["Order Hour"] = (
-                    prediction_data["Order Time"].dt.hour
-                )
-
-
-                # -----------------------------------------
-                # Remove Columns Not Used By Model
-                # -----------------------------------------
-
-                columns_to_remove = [
-                    "Order Date",
-                    "Order Time",
-                    "Order Item Id",
-                    "Order Id",
-                    "Customer Id",
-                    "Days for shipping (real)",
-                    "Delivery Status",
-                    "Order Status",
-                    "Shipping Date",
-                    "Shipping Time",
-                    "Late_delivery_risk"
-                ]
-
-                prediction_data = prediction_data.drop(
-                    columns=[
-                        col
-                        for col in columns_to_remove
-                        if col in prediction_data.columns
-                    ],
-                    errors="ignore"
-                )
-
-
-                # -----------------------------------------
-                # Keep Exactly Model Features
-                # -----------------------------------------
-
-                model_features = (
-                    model.named_steps["preprocessor"]
-                    .feature_names_in_
-                )
-
-                prediction_data = prediction_data[
-                    model_features
-                ]
-
-
-                # -----------------------------------------
-                # Prediction
-                # -----------------------------------------
-
-                predictions = model.predict(
-                    prediction_data
-                )
-
-                probabilities = model.predict_proba(
-                    prediction_data
-                )
-
-
-                # -----------------------------------------
-                # Find Class 1 Probability
-                # -----------------------------------------
-
-                class_1_index = list(
-                    model.classes_
-                ).index(1)
-
-                late_probabilities = (
-                    probabilities[:, class_1_index]
-                )
-
-
-                # -----------------------------------------
-                # Add Results To Original Data
-                # -----------------------------------------
-
-                df["Late_Delivery_Prediction"] = [
-                    "Late" if prediction == 1
-                    else "On Time"
-                    for prediction in predictions
-                ]
-
-                df["Late_Delivery_Probability"] = (
-                    late_probabilities * 100
-                ).round(2)
-
-
-                # -----------------------------------------
-                # Risk Level
-                # -----------------------------------------
-
-                df["Risk_Level"] = [
-                    "High"
-                    if probability >= 0.70
-                    else "Medium"
-                    if probability >= 0.40
-                    else "Low"
-                    for probability in late_probabilities
-                ]
-
-
-            # =================================================
-            # Results
-            # =================================================
+        else:
 
             st.success(
-                "✅ Prediction completed successfully!"
+                "🟢 Low Risk"
             )
-
-
-            st.subheader("📊 Prediction Results")
-
-
-            # ---------------------------------------------
-            # Statistics
-            # ---------------------------------------------
-
-            total_orders = len(df)
-
-            late_orders = sum(
-                predictions == 1
-            )
-
-            on_time_orders = total_orders - late_orders
-
-
-            col1, col2, col3 = st.columns(3)
-
-
-            with col1:
-
-                st.metric(
-                    "Total Orders",
-                    total_orders
-                )
-
-
-            with col2:
-
-                st.metric(
-                    "Predicted Late",
-                    late_orders
-                )
-
-
-            with col3:
-
-                st.metric(
-                    "Predicted On Time",
-                    on_time_orders
-                )
-
-
-            # ---------------------------------------------
-            # Results Table
-            # ---------------------------------------------
-
-            st.dataframe(
-                df,
-                use_container_width=True
-            )
-
-
-            # =================================================
-            # Download Excel
-            # =================================================
-
-            st.subheader(
-                "📥 Download Results"
-            )
-
-
-            output_file = "late_delivery_predictions.xlsx"
-
-
-            df.to_excel(
-                output_file,
-                index=False
-            )
-
-
-            with open(
-                output_file,
-                "rb"
-            ) as file:
-
-                st.download_button(
-                    label="📥 Download Excel File",
-                    data=file,
-                    file_name=output_file,
-                    mime=(
-                        "application/vnd.openxmlformats-officedocument"
-                        ".spreadsheetml.sheet"
-                    )
-                )
 
 
     except Exception as e:
 
         st.error(
-            f"❌ Error: {e}"
+            f"Prediction Error: {e}"
         )
-```
