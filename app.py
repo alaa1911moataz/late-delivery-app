@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 import pandas as pd
 import joblib
@@ -16,7 +17,121 @@ st.set_page_config(
 
 
 # =========================================================
-# Load Model from Hugging Face
+# Dark Mode
+# =========================================================
+
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+
+# =========================================================
+# Custom Theme
+# =========================================================
+
+if st.session_state.dark_mode:
+
+    st.markdown(
+        """
+        <style>
+
+        .stApp {
+            background-color: #0E1117;
+            color: #FAFAFA;
+        }
+
+        .stApp p,
+        .stApp label,
+        .stApp h1,
+        .stApp h2,
+        .stApp h3,
+        .stApp h4,
+        .stApp h5,
+        .stApp h6 {
+            color: #FAFAFA !important;
+        }
+
+        .stTextInput input,
+        .stNumberInput input,
+        .stSelectbox div[data-baseweb="select"] > div {
+            background-color: #262730 !important;
+            color: #FFFFFF !important;
+        }
+
+        .stSelectbox div[data-baseweb="select"] span {
+            color: #FFFFFF !important;
+        }
+
+        section[data-testid="stFileUploader"] {
+            background-color: #262730;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .stButton button {
+            background-color: #262730;
+            color: #FFFFFF;
+            border: 1px solid #555555;
+            border-radius: 8px;
+        }
+
+        .stButton button:hover {
+            border-color: #FFFFFF;
+        }
+
+        [data-testid="stDataFrame"] {
+            background-color: #262730;
+        }
+
+        [data-testid="stMetric"] {
+            background-color: #262730;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+else:
+
+    st.markdown(
+        """
+        <style>
+
+        .stApp {
+            background-color: #FFFFFF;
+            color: #000000;
+        }
+
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# =========================================================
+# Dark Mode Button
+# =========================================================
+
+col1, col2 = st.columns([9, 1])
+
+with col2:
+
+    if st.button(
+        "☀️" if st.session_state.dark_mode else "🌙",
+        help="Toggle Dark Mode"
+    ):
+
+        st.session_state.dark_mode = (
+            not st.session_state.dark_mode
+        )
+
+        st.rerun()
+
+
+# =========================================================
+# Load Model From Hugging Face
 # =========================================================
 
 @st.cache_resource
@@ -30,7 +145,19 @@ def load_model():
     return joblib.load(model_path)
 
 
-model = load_model()
+try:
+
+    model = load_model()
+
+except Exception as e:
+
+    st.error(
+        "❌ Could not load the prediction model."
+    )
+
+    st.code(str(e))
+
+    st.stop()
 
 
 # =========================================================
@@ -40,544 +167,668 @@ model = load_model()
 st.title("🚚 Late Delivery Risk Prediction")
 
 st.write(
-    "Enter the order information below to predict whether "
-    "the order is at risk of late delivery."
+    "Upload an Excel or CSV file containing order information. "
+    "The model will predict late delivery risk for every order."
 )
 
 
 # =========================================================
-# Input Form
+# Required Columns
 # =========================================================
 
-with st.form("prediction_form"):
-
-    # =====================================================
-    # Order Information
-    # =====================================================
-
-    st.subheader("📦 Order Information")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-
-        Type = st.selectbox(
-            "Type",
-            [
-                "DEBIT",
-                "TRANSFER",
-                "CASH",
-                "PAYMENT"
-            ]
-        )
-
-        shipping_mode = st.selectbox(
-            "Shipping Mode",
-            [
-                "Standard Class",
-                "Second Class",
-                "First Class",
-                "Same Day"
-            ]
-        )
-
-        days_scheduled = st.number_input(
-            "Days for shipment (scheduled)",
-            min_value=0,
-            max_value=10,
-            value=3
-        )
-
-        order_quantity = st.number_input(
-            "Order Item Quantity",
-            min_value=1,
-            max_value=100,
-            value=1
-        )
-
-        customer_segment = st.selectbox(
-            "Customer Segment",
-            [
-                "Consumer",
-                "Corporate",
-                "Home Office"
-            ]
-        )
-
-    with col2:
-
-        benefit_per_order = st.number_input(
-            "Benefit per order",
-            value=0.0
-        )
-
-        sales_customer = st.number_input(
-            "Sales per customer",
-            min_value=0.0,
-            value=100.0
-        )
-
-        order_item_discount = st.number_input(
-            "Order Item Discount",
-            min_value=0.0,
-            value=0.0
-        )
-
-        order_item_discount_rate = st.number_input(
-            "Order Item Discount Rate",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.0
-        )
-
-        order_item_profit_ratio = st.number_input(
-            "Order Item Profit Ratio",
-            value=0.0
-        )
-
-    with col3:
-
-        sales = st.number_input(
-            "Sales",
-            min_value=0.0,
-            value=100.0
-        )
-
-        order_item_total = st.number_input(
-            "Order Item Total",
-            min_value=0.0,
-            value=100.0
-        )
-
-        product_price = st.number_input(
-            "Product Price",
-            min_value=0.0,
-            value=100.0
-        )
+required_columns = [
 
-        category_id = st.number_input(
-            "Category Id",
-            min_value=0,
-            value=1
-        )
+    "Type",
 
-        department_id = st.number_input(
-            "Department Id",
-            min_value=0,
-            value=1
-        )
+    "Days for shipment (scheduled)",
 
-        product_card_id = st.number_input(
-            "Product Card Id",
-            min_value=0,
-            value=1
-        )
+    "Benefit per order",
 
+    "Sales per customer",
 
-    # =====================================================
-    # Customer Information
-    # =====================================================
+    "Category Id",
 
-    st.subheader("👤 Customer Information")
+    "Category Name",
 
-    col1, col2, col3 = st.columns(3)
+    "Customer City",
 
-    with col1:
+    "Customer Country",
 
-        customer_city = st.text_input(
-            "Customer City",
-            value="Caguas"
-        )
+    "Customer Segment",
 
-        customer_country = st.text_input(
-            "Customer Country",
-            value="Puerto Rico"
-        )
+    "Customer State",
 
-        customer_state = st.text_input(
-            "Customer State",
-            value="PR"
-        )
+    "Department Id",
 
-    with col2:
+    "Department Name",
 
-        latitude = st.number_input(
-            "Latitude",
-            value=18.0
-        )
+    "Latitude",
 
-        longitude = st.number_input(
-            "Longitude",
-            value=-66.0
-        )
+    "Longitude",
 
-        market = st.text_input(
-            "Market",
-            value="LATAM"
-        )
+    "Market",
 
-    with col3:
+    "Order City",
 
-        order_region = st.text_input(
-            "Order Region",
-            value="Caribbean"
-        )
+    "Order Country",
 
-        order_state = st.text_input(
-            "Order State",
-            value="PR"
-        )
+    "Order Item Discount",
 
-        order_city = st.text_input(
-            "Order City",
-            value="Caguas"
-        )
+    "Order Item Discount Rate",
 
-        order_country = st.text_input(
-            "Order Country",
-            value="Puerto Rico"
-        )
+    "Order Item Profit Ratio",
 
+    "Order Item Quantity",
 
-    # =====================================================
-    # Category / Product Information
-    # =====================================================
+    "Sales",
 
-    st.subheader("🛍️ Product Information")
+    "Order Item Total",
 
-    col1, col2 = st.columns(2)
+    "Order Region",
 
-    with col1:
+    "Order State",
 
-        category_name = st.text_input(
-            "Category Name",
-            value="Sporting Goods"
-        )
+    "Product Card Id",
 
-        department_name = st.text_input(
-            "Department Name",
-            value="Fitness"
-        )
+    "Product Name",
 
-    with col2:
+    "Product Price",
 
-        product_name = st.text_input(
-            "Product Name",
-            value="Example Product"
-        )
+    "Shipping Mode",
 
+    "Order Date",
 
-    # =====================================================
-    # Date & Time
-    # =====================================================
+    "Order Time"
 
-    st.subheader("📅 Order Date & Time")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-
-        order_year = st.number_input(
-            "Order Year",
-            min_value=2000,
-            max_value=2030,
-            value=2017
-        )
-
-    with col2:
-
-        order_month = st.number_input(
-            "Order Month",
-            min_value=1,
-            max_value=12,
-            value=6
-        )
-
-    with col3:
-
-        order_day = st.number_input(
-            "Order Day",
-            min_value=1,
-            max_value=31,
-            value=15
-        )
-
-    with col4:
-
-        order_dayofweek = st.number_input(
-            "Order DayOfWeek",
-            min_value=0,
-            max_value=6,
-            value=2
-        )
-
-    order_hour = st.number_input(
-        "Order Hour",
-        min_value=0,
-        max_value=23,
-        value=12
-    )
-
-
-    # =====================================================
-    # Prediction Button
-    # =====================================================
-
-    predict_button = st.form_submit_button(
-        "🔮 Predict Late Delivery Risk"
-    )
+]
 
 
 # =========================================================
-# Prediction
+# File Upload
 # =========================================================
 
-if predict_button:
+st.subheader("📂 Upload Your File")
 
-    # =====================================================
-    # Create Input DataFrame
-    # =====================================================
-
-    input_data = pd.DataFrame({
-
-        "Type": [
-            Type
-        ],
-
-        "Days for shipment (scheduled)": [
-            days_scheduled
-        ],
-
-        "Benefit per order": [
-            benefit_per_order
-        ],
-
-        "Sales per customer": [
-            sales_customer
-        ],
-
-        "Category Id": [
-            category_id
-        ],
-
-        "Category Name": [
-            category_name
-        ],
-
-        "Customer City": [
-            customer_city
-        ],
-
-        "Customer Country": [
-            customer_country
-        ],
-
-        "Customer Segment": [
-            customer_segment
-        ],
-
-        "Customer State": [
-            customer_state
-        ],
-
-        "Department Id": [
-            department_id
-        ],
-
-        "Department Name": [
-            department_name
-        ],
-
-        "Latitude": [
-            latitude
-        ],
-
-        "Longitude": [
-            longitude
-        ],
-
-        "Market": [
-            market
-        ],
-
-        "Order City": [
-            order_city
-        ],
-
-        "Order Country": [
-            order_country
-        ],
-
-        "Order Item Discount": [
-            order_item_discount
-        ],
-
-        "Order Item Discount Rate": [
-            order_item_discount_rate
-        ],
-
-        "Order Item Profit Ratio": [
-            order_item_profit_ratio
-        ],
-
-        "Order Item Quantity": [
-            order_quantity
-        ],
-
-        "Sales": [
-            sales
-        ],
-
-        "Order Item Total": [
-            order_item_total
-        ],
-
-        "Order Region": [
-            order_region
-        ],
-
-        "Order State": [
-            order_state
-        ],
-
-        "Product Card Id": [
-            product_card_id
-        ],
-
-        "Product Name": [
-            product_name
-        ],
-
-        "Product Price": [
-            product_price
-        ],
-
-        "Shipping Mode": [
-            shipping_mode
-        ],
-
-        "Order Year": [
-            order_year
-        ],
-
-        "Order Month": [
-            order_month
-        ],
-
-        "Order Day": [
-            order_day
-        ],
-
-        "Order DayOfWeek": [
-            order_dayofweek
-        ],
-
-        "Order Hour": [
-            order_hour
-        ]
-    })
+uploaded_file = st.file_uploader(
+    "Upload Excel or CSV file",
+    type=[
+        "xlsx",
+        "xls",
+        "csv"
+    ]
+)
 
 
-    # =====================================================
-    # Prediction
-    # =====================================================
+# =========================================================
+# Process Uploaded File
+# =========================================================
+
+if uploaded_file is not None:
 
     try:
 
-        prediction = model.predict(
-            input_data
-        )[0]
+        # -------------------------------------------------
+        # Read File
+        # -------------------------------------------------
 
-        probability = model.predict_proba(
-            input_data
-        )[0]
+        if uploaded_file.name.lower().endswith(".csv"):
 
-
-        # Find probability of class 1
-
-        class_1_index = list(
-            model.classes_
-        ).index(1)
-
-        late_probability = probability[
-            class_1_index
-        ]
-
-
-        # =================================================
-        # Results
-        # =================================================
-
-        st.divider()
-
-        st.subheader(
-            "📊 Prediction Result"
-        )
-
-        col1, col2 = st.columns(2)
-
-
-        with col1:
-
-            if prediction == 1:
-
-                st.error(
-                    "⚠️ HIGH RISK OF LATE DELIVERY"
-                )
-
-            else:
-
-                st.success(
-                    "✅ LOW RISK OF LATE DELIVERY"
-                )
-
-
-        with col2:
-
-            st.metric(
-                "Late Delivery Probability",
-                f"{late_probability * 100:.2f}%"
-            )
-
-
-        # =================================================
-        # Probability Bar
-        # =================================================
-
-        st.write(
-            "### Risk Level"
-        )
-
-        st.progress(
-            float(late_probability)
-        )
-
-
-        # =================================================
-        # Risk Classification
-        # =================================================
-
-        if late_probability >= 0.70:
-
-            st.error(
-                "🔴 High Risk"
-            )
-
-        elif late_probability >= 0.40:
-
-            st.warning(
-                "🟡 Medium Risk"
+            df = pd.read_csv(
+                uploaded_file
             )
 
         else:
 
-            st.success(
-                "🟢 Low Risk"
+            df = pd.read_excel(
+                uploaded_file
             )
 
 
-    except Exception as e:
+        # -------------------------------------------------
+        # Success Message
+        # -------------------------------------------------
 
-        st.error(
-            f"Prediction Error: {e}"
+        st.success(
+            f"✅ File uploaded successfully: "
+            f"{uploaded_file.name}"
         )
+
+
+        # -------------------------------------------------
+        # Basic Information
+        # -------------------------------------------------
+
+        st.write(
+            f"**Rows:** {df.shape[0]}  |  "
+            f"**Columns:** {df.shape[1]}"
+        )
+
+
+        # -------------------------------------------------
+        # Preview
+        # -------------------------------------------------
+
+        st.subheader(
+            "📋 Uploaded Data Preview"
+        )
+
+        st.dataframe(
+            df.head(10),
+            use_container_width=True
+        )
+
+
+        # =================================================
+        # Check Required Columns
+        # =================================================
+
+        missing_columns = [
+
+            column
+
+            for column in required_columns
+
+            if column not in df.columns
+
+        ]
+
+
+        if missing_columns:
+
+            st.error(
+                "❌ Some required columns are missing."
+            )
+
+            st.write(
+                "Please make sure your file contains:"
+            )
+
+            for column in missing_columns:
+
+                st.write(
+                    f"- `{column}`"
+                )
+
+            st.stop()
+
+
+        st.success(
+            "✅ All required columns are available."
+        )
+
+
+        # =================================================
+        # Prediction Button
+        # =================================================
+
+        if st.button(
+            "🔮 Predict Late Delivery Risk",
+            type="primary",
+            use_container_width=True
+        ):
+
+            try:
+
+                with st.spinner(
+                    "Making predictions..."
+                ):
+
+                    # -------------------------------------
+                    # Copy Original Data
+                    # -------------------------------------
+
+                    prediction_data = df.copy()
+
+
+                    # -------------------------------------
+                    # Convert Order Date
+                    # -------------------------------------
+
+                    prediction_data["Order Date"] = (
+                        pd.to_datetime(
+                            prediction_data["Order Date"],
+                            errors="coerce"
+                        )
+                    )
+
+
+                    # -------------------------------------
+                    # Create Date Features
+                    # -------------------------------------
+
+                    prediction_data["Order Year"] = (
+                        prediction_data["Order Date"].dt.year
+                    )
+
+                    prediction_data["Order Month"] = (
+                        prediction_data["Order Date"].dt.month
+                    )
+
+                    prediction_data["Order Day"] = (
+                        prediction_data["Order Date"].dt.day
+                    )
+
+                    prediction_data["Order DayOfWeek"] = (
+                        prediction_data["Order Date"].dt.dayofweek
+                    )
+
+
+                    # -------------------------------------
+                    # Convert Order Time
+                    # -------------------------------------
+
+                    prediction_data["Order Time"] = (
+                        pd.to_datetime(
+                            prediction_data["Order Time"],
+                            format="%H:%M:%S",
+                            errors="coerce"
+                        )
+                    )
+
+
+                    # -------------------------------------
+                    # Create Hour Feature
+                    # -------------------------------------
+
+                    prediction_data["Order Hour"] = (
+                        prediction_data["Order Time"].dt.hour
+                    )
+
+
+                    # -------------------------------------
+                    # Check Date / Time
+                    # -------------------------------------
+
+                    invalid_dates = (
+                        prediction_data["Order Year"].isna().sum()
+                    )
+
+                    invalid_times = (
+                        prediction_data["Order Hour"].isna().sum()
+                    )
+
+
+                    if invalid_dates > 0:
+
+                        st.warning(
+                            f"⚠️ {invalid_dates} rows have "
+                            "invalid Order Date values."
+                        )
+
+
+                    if invalid_times > 0:
+
+                        st.warning(
+                            f"⚠️ {invalid_times} rows have "
+                            "invalid Order Time values."
+                        )
+
+
+                    # -------------------------------------
+                    # Remove Columns Not Used By Model
+                    # -------------------------------------
+
+                    columns_to_remove = [
+
+                        "Order Date",
+
+                        "Order Time",
+
+                        "Order Item Id",
+
+                        "Order Id",
+
+                        "Customer Id",
+
+                        "Days for shipping (real)",
+
+                        "Delivery Status",
+
+                        "Order Status",
+
+                        "Shipping Date",
+
+                        "Shipping Time",
+
+                        "Late_delivery_risk"
+
+                    ]
+
+
+                    prediction_data = (
+                        prediction_data.drop(
+                            columns=[
+                                column
+
+                                for column in columns_to_remove
+
+                                if column in prediction_data.columns
+                            ],
+                            errors="ignore"
+                        )
+                    )
+
+
+                    # -------------------------------------
+                    # Get Exact Model Features
+                    # -------------------------------------
+
+                    model_features = (
+                        model
+                        .named_steps[
+                            "preprocessor"
+                        ]
+                        .feature_names_in_
+                    )
+
+
+                    # -------------------------------------
+                    # Keep Same Features As Training
+                    # -------------------------------------
+
+                    prediction_data = (
+                        prediction_data[
+                            model_features
+                        ]
+                    )
+
+
+                    # -------------------------------------
+                    # Make Predictions
+                    # -------------------------------------
+
+                    predictions = (
+                        model.predict(
+                            prediction_data
+                        )
+                    )
+
+
+                    probabilities = (
+                        model.predict_proba(
+                            prediction_data
+                        )
+                    )
+
+
+                    # -------------------------------------
+                    # Find Class 1
+                    # -------------------------------------
+
+                    class_1_index = list(
+                        model.classes_
+                    ).index(1)
+
+
+                    late_probabilities = (
+                        probabilities[
+                            :,
+                            class_1_index
+                        ]
+                    )
+
+
+                    # =====================================
+                    # Add Predictions To Original Data
+                    # =====================================
+
+                    df[
+                        "Late_Delivery_Prediction"
+                    ] = [
+
+                        "Late"
+                        if prediction == 1
+                        else "On Time"
+
+                        for prediction in predictions
+
+                    ]
+
+
+                    df[
+                        "Late_Delivery_Probability"
+                    ] = (
+
+                        late_probabilities * 100
+
+                    ).round(2)
+
+
+                    # -------------------------------------
+                    # Risk Level
+                    # -------------------------------------
+
+                    df[
+                        "Risk_Level"
+                    ] = [
+
+                        "High"
+
+                        if probability >= 0.70
+
+                        else "Medium"
+
+                        if probability >= 0.40
+
+                        else "Low"
+
+                        for probability
+                        in late_probabilities
+
+                    ]
+
+
+                # =================================================
+                # Prediction Completed
+                # =================================================
+
+                st.success(
+                    "✅ Prediction completed successfully!"
+                )
+
+
+                # =================================================
+                # Statistics
+                # =================================================
+
+                st.subheader(
+                    "📊 Prediction Summary"
+                )
+
+
+                total_orders = len(
+                    df
+                )
+
+
+                late_orders = int(
+                    sum(
+                        predictions == 1
+                    )
+                )
+
+
+                on_time_orders = (
+                    total_orders
+                    - late_orders
+                )
+
+
+                high_risk = int(
+                    sum(
+                        late_probabilities >= 0.70
+                    )
+                )
+
+
+                medium_risk = int(
+                    sum(
+                        (
+                            late_probabilities >= 0.40
+                        )
+                        &
+                        (
+                            late_probabilities < 0.70
+                        )
+                    )
+                )
+
+
+                low_risk = int(
+                    sum(
+                        late_probabilities < 0.40
+                    )
+                )
+
+
+                # ---------------------------------------------
+                # Metrics
+                # ---------------------------------------------
+
+                col1, col2, col3 = st.columns(3)
+
+
+                with col1:
+
+                    st.metric(
+                        "Total Orders",
+                        total_orders
+                    )
+
+
+                with col2:
+
+                    st.metric(
+                        "Predicted Late",
+                        late_orders
+                    )
+
+
+                with col3:
+
+                    st.metric(
+                        "Predicted On Time",
+                        on_time_orders
+                    )
+
+
+                # ---------------------------------------------
+                # Risk Metrics
+                # ---------------------------------------------
+
+                col1, col2, col3 = st.columns(3)
+
+
+                with col1:
+
+                    st.error(
+                        f"🔴 High Risk: {high_risk}"
+                    )
+
+
+                with col2:
+
+                    st.warning(
+                        f"🟡 Medium Risk: {medium_risk}"
+                    )
+
+
+                with col3:
+
+                    st.success(
+                        f"🟢 Low Risk: {low_risk}"
+                    )
+
+
+                # =================================================
+                # Results
+                # =================================================
+
+                st.subheader(
+                    "📋 Prediction Results"
+                )
+
+
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
+
+                # =================================================
+                # Download Excel
+                # =================================================
+
+                st.subheader(
+                    "📥 Download Results"
+                )
+
+
+                output_file = (
+                    "late_delivery_predictions.xlsx"
+                )
+
+
+                # ---------------------------------------------
+                # Create Excel In Memory
+                # ---------------------------------------------
+
+                from io import BytesIO
+
+
+                output = BytesIO()
+
+
+                with pd.ExcelWriter(
+                    output,
+                    engine="openpyxl"
+                ) as writer:
+
+                    df.to_excel(
+                        writer,
+                        index=False,
+                        sheet_name="Predictions"
+                    )
+
+
+                output.seek(0)
+
+
+                # ---------------------------------------------
+                # Download Button
+                # ---------------------------------------------
+
+                st.download_button(
+                    label="📥 Download Excel File",
+                    data=output,
+                    file_name=output_file,
+                    mime=(
+                        "application/vnd.openxmlformats-officedocument"
+                        ".spreadsheetml.sheet"
+                    ),
+                    use_container_width=True
+                )
+
+
+            except Exception as e:
+
+                st.error(
+                    "❌ Prediction Error"
+                )
+
+                st.code(
+                    str(e)
+                )
+
+
+# =========================================================
+# Footer
+# =========================================================
+
+st.divider()
+
+st.caption(
+    "🚚 Late Delivery Risk Prediction | "
+    "Machine Learning Application"
+)
+```
