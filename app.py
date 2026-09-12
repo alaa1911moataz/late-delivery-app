@@ -23,7 +23,7 @@ st.set_page_config(
 def load_model():
 
     model_path = hf_hub_download(
-        repo_id="alaa1911/late-delivery-model",
+        repo_id="yahyaomar2210/late_delivery_model",
         filename="late_delivery_model.pkl"
     )
 
@@ -493,7 +493,9 @@ if predict_button:
         )[0]
 
 
-        # Find probability of class 1
+        # =================================================
+        # Find Probability of Class 1
+        # =================================================
 
         class_1_index = list(
             model.classes_
@@ -516,7 +518,6 @@ if predict_button:
 
         col1, col2 = st.columns(2)
 
-
         with col1:
 
             if prediction == 1:
@@ -530,7 +531,6 @@ if predict_button:
                 st.success(
                     "✅ LOW RISK OF LATE DELIVERY"
                 )
-
 
         with col2:
 
